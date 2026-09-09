@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String          @id @default(uuid())
+  google_id          String          @unique
+  email              String          @unique
+  name               String
+  avatar             String?
+  slack_access_token String?
+  created_at         DateTime        @default(now())
+  slack_webhook  String?
+
+  sender_accounts    SenderAccount[]
+  templates          EmailTemplate[]
+  campaigns          Campaign[]
+  rate_limit_logs    RateLimitLog[]
+}
+
+model SenderAccount {
+  id               String         @id @default(uuid())
+  user_id          String
+  email            String
+  sender_name      String
+  smtp_host        String         @default("smtp.ethereal.email")
+  smtp_port        Int            @default(587)
+  smtp_user        String
+  smtp_pass        String
+  max_hourly_limit Int            @default(100)
+  created_at       DateTime       @default(now())
+
+  user             User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  campaigns        Campaign[]
+  rate_limit_logs  RateLimitLog[]
+}
+
+model EmailTemplate {
+  id         String     @id @default(uuid())
+  user_id    String
+  title      String
+  subject    String
+  body       String     @db.Text
+  created_at DateTime   @default(now())
+
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  campaigns  Campaign[]
+}
+
+model Campaign {
+  id                   String         @id @default(uuid())
+  user_id              String
+  sender_account_id    String
+  template_id          String?
+  subject              String
+  body                 String         @db.Text
+  hourly_limit         Int
+  delay_between_emails Int
+  created_at           DateTime       @default(now())
+
+  user                 User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  sender_account       SenderAccount  @relation(fields: [sender_account_id], references: [id], onDelete: Cascade)
+  template             EmailTemplate? @relation(fields: [template_id], references: [id], onDelete: SetNull)
+  jobs                 Job[]
+}
+
+enum JobStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Job {
+  id              String    @id @default(uuid())
+  campaign_id     String
+  recipient_email String
+  status          JobStatus @default(PENDING)
+  scheduled_at    DateTime
+  sent_at         DateTime?
+  error_message   String?   @db.Text
+
+  campaign        Campaign  @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduled_at])
+}
+
+model RateLimitLog {
+  id                String        @id @default(uuid())
+  sender_account_id String
+  user_id           String
+  hour_window       String
+  emails_attempted  Int
+  slack_notified    Boolean       @default(false)
+  created_at        DateTime      @default(now())
+
+  user              User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  sender_account    SenderAccount @relation(fields: [sender_account_id], references: [id], onDelete: Cascade)
+
+  @@index([sender_account_id, hour_window])
+}

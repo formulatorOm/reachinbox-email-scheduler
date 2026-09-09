@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js & Build outputs
+.next/
+**/build/
+**/dist/
+**/out/
+
+# Environment Variables
+.env
+.env*.local
+
+# Logs & Runtime files
+*.log
+**/*.log
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# IDE & OS
+.vscode/
+.idea/
