@@ -1,3 +1,6 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
 [phases.install]
 cmds = ["npm install"]
 
