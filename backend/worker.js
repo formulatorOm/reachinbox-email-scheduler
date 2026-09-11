@@ -4,16 +4,7 @@ const Redis = require('ioredis');
 const { Client } = require('@elastic/elasticsearch');
 const prisma = require('./db');
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: Number(process.env.REDIS_PORT) || 6379,
-  maxRetriesPerRequest: null,
-  enableOfflineQueue: true,
-});
-
-redis.on('error', (err) => {
-  console.warn('Worker Redis connection issue:', err.message);
-});
+const redis = require('./redis');
 
 const elasticClient = new Client({ node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200' });
 
