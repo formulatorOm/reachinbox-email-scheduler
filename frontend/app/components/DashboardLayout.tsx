@@ -24,7 +24,7 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
 
   // Fetch counts for badge
   const fetchCounts = () => {
-    fetch(`http://localhost:5002/api/stats/${encodeURIComponent(userId)}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'}/api/stats/${encodeURIComponent(userId)}`)
       .then(res => res.json())
       .then(data => {
         if (data.scheduled !== undefined) setScheduledCount(data.scheduled);
@@ -133,7 +133,7 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
         {/* SLACK & LOGOUT BUTTONS */}
         <div className="p-4 border-t border-gray-100 space-y-2">
           <a
-            href={`http://localhost:5002/api/slack/auth?userId=${encodeURIComponent(userId)}`}
+            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'}/api/slack/auth?userId=${encodeURIComponent(userId)}`}
             className="w-full flex items-center justify-center gap-2 bg-[#4A154B] text-white py-2 px-3 rounded-xl transition-all font-medium text-xs hover:bg-[#3B113C] shadow-xs"
           >
             <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
