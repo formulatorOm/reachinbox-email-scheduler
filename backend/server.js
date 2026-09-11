@@ -313,7 +313,8 @@ app.get('/api/slack/callback', async (req, res) => {
       data: { slack_webhook: webhookUrl },
     });
 
-    res.redirect('http://localhost:3000/?slack=success');
+    const frontendUrl = process.env.FRONTEND_URL || 'https://reachinbox-email-scheduler-chi-two.vercel.app';
+    res.redirect(`${frontendUrl}/?slack=success`);
   } catch (err) {
     console.error('Slack OAuth Error:', err);
     res.status(500).send('Failed to connect Slack.');
