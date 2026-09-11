@@ -1,8 +1,8 @@
 'use client';
 
-import { Search, Filter, RotateCcw, Clock, Send, Plus } from 'lucide-react';
+import { Search, Filter, RotateCcw, Clock, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import LogoutButton from './LogoutButton';
 
@@ -13,16 +13,18 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, session }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const isLoginPage = pathname === '/login';
 
   const [scheduledCount, setScheduledCount] = useState<number>(0);
   const [sentCount, setSentCount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSlackConnected, setIsSlackConnected] = useState<boolean>(false);
+  const [showSlackBanner, setShowSlackBanner] = useState<boolean>(false);
 
   const userId = session?.user?.email || '1';
 
-  // Fetch counts for badge
+  // Fetch counts & Slack status
   const fetchCounts = () => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'}/api/stats/${encodeURIComponent(userId)}`)
       .then(res => res.json())
@@ -31,7 +33,6 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
         if (data.sent !== undefined) setSentCount(data.sent);
       })
       .catch(() => {
-        // Fallback default numbers matching Figma
         setScheduledCount(12);
         setSentCount(785);
       });
@@ -41,9 +42,23 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
     if (!isLoginPage) {
       fetchCounts();
       const interval = setInterval(fetchCounts, 5000);
+
+      // Check if Slack query param is present or saved in localStorage
+      const slackSuccess = searchParams?.get('slack') === 'success';
+      const storedSlack = localStorage.getItem('slack_connected') === 'true';
+
+      if (slackSuccess || storedSlack) {
+        setIsSlackConnected(true);
+        localStorage.setItem('slack_connected', 'true');
+        if (slackSuccess) {
+          setShowSlackBanner(true);
+          setTimeout(() => setShowSlackBanner(false), 6000);
+        }
+      }
+
       return () => clearInterval(interval);
     }
-  }, [isLoginPage, userId]);
+  }, [isLoginPage, userId, searchParams]);
 
   if (isLoginPage) {
     return <>{children}</>;
@@ -61,7 +76,15 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
   };
 
   return (
-    <div className="bg-[#F8F9FA] flex h-screen overflow-hidden text-gray-800 w-full">
+    <div className="bg-[#F8F9FA] flex h-screen overflow-hidden text-gray-800 w-full relative">
+      {/* SUCCESS SLACK NOTIFICATION TOAST BANNER */}
+      {showSlackBanner && (
+        <div className="fixed top-4 right-4 z-50 bg-[#00A84F] text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-bounce">
+          <CheckCircle2 size={20} />
+          <span className="text-xs font-semibold">Slack Connected Successfully! Real-time alerts enabled.</span>
+        </div>
+      )}
+
       {/* SIDEBAR matching Figma Images 2 & 3 */}
       <aside className="w-64 bg-white border-r border-gray-200/80 flex flex-col relative z-40 select-none">
         
@@ -132,15 +155,22 @@ export default function DashboardLayout({ children, session }: DashboardLayoutPr
 
         {/* SLACK & LOGOUT BUTTONS */}
         <div className="p-4 border-t border-gray-100 space-y-2">
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'}/api/slack/auth?userId=${encodeURIComponent(userId)}`}
-            className="w-full flex items-center justify-center gap-2 bg-[#4A154B] text-white py-2 px-3 rounded-xl transition-all font-medium text-xs hover:bg-[#3B113C] shadow-xs"
-          >
-            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521h-6.313A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522-2.52h-6.313z"/>
-            </svg>
-            <span>Connect Slack</span>
-          </a>
+          {isSlackConnected ? (
+            <div className="w-full flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 py-2 px-3 rounded-xl font-semibold text-xs shadow-xs">
+              <CheckCircle2 size={15} className="text-emerald-600" />
+              <span>Slack Connected</span>
+            </div>
+          ) : (
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'}/api/slack/auth?userId=${encodeURIComponent(userId)}`}
+              className="w-full flex items-center justify-center gap-2 bg-[#4A154B] text-white py-2 px-3 rounded-xl transition-all font-medium text-xs hover:bg-[#3B113C] shadow-xs"
+            >
+              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521h-6.313A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522-2.52h-6.313z"/>
+              </svg>
+              <span>Connect Slack</span>
+            </a>
+          )}
           <LogoutButton />
         </div>
       </aside>
